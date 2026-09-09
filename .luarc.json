@@ -1,0 +1,21 @@
+{
+	"runtime.nonstandardSymbol": [
+		"!=",
+		"+=",
+		"-=",
+		"*=",
+		"/=",
+		"%=",
+		"^=",
+		"|=",
+		"&=",
+		"<<=",
+		">>="
+	],
+	"diagnostics.disable": [
+		"trailing-space",
+		"deprecated",
+		"err-esc"
+	],
+	"runtime.version": "Lua 5.4"
+}
