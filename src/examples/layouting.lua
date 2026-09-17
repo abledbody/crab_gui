@@ -1,6 +1,5 @@
 local crab = require"src/crab_gui/gui"
 local crab_layout = require"src/crab_gui/layout"
----@class Gui
 local gui = crab.new()
 
 ---@param ctx RenderRequest
@@ -11,12 +10,11 @@ local function draw_panel(ctx)
 	rrectfill(bounds_min.x, bounds_min.y, size.x, size.y, ctx.args.radius, ctx.args.col)
 end
 
+---@param gui Gui
 ---@param radius number
 ---@param col integer
----@return Gui self
-function gui:demo_panel(radius, col)
-	self:push_render(draw_panel, {radius = radius, col = col})
-	return self
+local function panel(gui, radius, col)
+	gui:push_render(draw_panel, {radius = radius, col = col})
 end
 
 local left_panel_rect =
@@ -35,26 +33,25 @@ local function do_gui()
 		vec(0.5, 0.5),
 		vec(math.cos(t() * 0.7) * 210 + 270, math.sin(t() * 0.8652) * 105 + 165)
 	))
-		:demo_panel(6, 1)
+	panel(gui, 6, 1)
 	
-		:push_rect(left_panel_rect)
-		:demo_panel(2, 16)
+	gui:push_rect(left_panel_rect)
+	panel(gui, 2, 16)
 	
-		:push_rect(upper_left_panel_rect)
-		:demo_panel(2, 1)
-		:pop_rect()
-		
-		:push_rect(lower_left_panel_rect)
-		:demo_panel(2, 1)
-		:pop_rect()
+	gui:push_rect(upper_left_panel_rect)
+	panel(gui, 2, 1)
+	gui:pop_rect()
+	gui:push_rect(lower_left_panel_rect)
+	panel(gui, 2, 1)
+	gui:pop_rect()
 	
-		:pop_rect()
+	gui:pop_rect()
 	
-		:push_rect(right_panel_rect)
-		:demo_panel(2, 16)
-		:pop_rect()
+	gui:push_rect(right_panel_rect)
+	panel(gui, 2, 16)
+	gui:pop_rect()
 	
-		:pop_rect()
+	gui:pop_rect()
 end
 
 function _update()

@@ -3,27 +3,23 @@ local mouselib = require"src/mouse"
 local insert, remove = table.insert, table.remove
 
 ---The metatable and index target for the Gui class.
----
----Custom widget functions should be added to this table with a short namespace prefix, such as `crab_button()`.
 ---@class Gui
 local m_gui = {}
 m_gui.__index = m_gui
 
 ---Pushes a child rect to the stack relative to the current rect.
 ---@param rect UiRect
----@return Gui self
 function m_gui:push_rect(rect)
 	self.bounds = rect:bounds(self.bounds)
 	insert(self.bounds_stack, self.bounds)
-	return self
 end
 
 ---Removes a rect from the stack, and restores its parent rect.
----@return Gui self
+---@return Bounds?
 function m_gui:pop_rect()
-	remove(self.bounds_stack)
+	local old_bounds = remove(self.bounds_stack)
 	self.bounds = self.bounds_stack[#self.bounds_stack]
-	return self
+	return old_bounds
 end
 
 ---A sorting layer. Render requests and interactables are always below children,
@@ -37,7 +33,6 @@ end
 ---Pushes a sorting layer to the stack, to be sorted by the parent layer. Further
 ---render requests and interactables will be put on that layer.
 ---@param priority number
----@return Gui self
 function m_gui:push_layer(priority)
 	self.layer.children = self.layer.children or {}
 	
@@ -51,20 +46,19 @@ function m_gui:push_layer(priority)
 	insert(self.layer.children, layer)
 	insert(self.layer_stack, layer)
 	self.layer = layer
-	return self
 end
 
 ---Pops a sorting layer from the stack, restoring the parent layer as the render
 ---request and interactable target.
----@return Gui self
+---@return Layer
 function m_gui:pop_layer()
 	if #self.layer_stack <= 1 then
 		error("Cannot pop master layer.")
 	end
 	
-	remove(self.layer_stack)
+	local old_layer = remove(self.layer_stack)
 	self.layer = self.layer_stack[#self.layer_stack]
-	return self
+	return old_layer
 end
 
 ---A deferred request to render a widget.
@@ -78,7 +72,6 @@ end
 ---@param render fun(ctx: RenderRequest, data: any)
 ---@param args any
 ---@param id any?
----@return Gui self
 function m_gui:push_render(render, args, id)
 	insert(
 		self.layer.render_requests,
@@ -89,7 +82,6 @@ function m_gui:push_render(render, args, id)
 			bounds = self.bounds,
 		} --[[@as RenderRequest]]
 	)
-	return self
 end
 
 ---An interaction target for the mouse and keyboard.
@@ -101,7 +93,6 @@ end
 ---Creates an interaction target on the current layer and in the current bounds.
 ---@param intersect? fun(ctx: Interactable, pt: userdata, data: any): boolean The intersection test function.
 ---@param id any Arbitrary data for identifying the source of the interactable.
----@return Gui self
 function m_gui:push_interactable(intersect, id)
 	insert(
 		self.layer.interactables,
@@ -111,7 +102,6 @@ function m_gui:push_interactable(intersect, id)
 			bounds = self.bounds,
 		} --[[@as Interactable]]
 	)
-	return self
 end
 
 ---Iterates a table ordered by a key in that table.
@@ -165,10 +155,7 @@ function m_gui:find_hot(mouse_pt, layer)
 	return nil
 end
 
----@alias EventType "entered" | "exited" | "pressed" | "released"
-
 ---Generates the set of events that have occured since the last flush.
----@return {variant: EventType, id: any}[] events
 function m_gui:event_step()
 	local new_hot = self:find_hot(mouselib.pos, self.layer_stack[1])
 	
@@ -253,10 +240,8 @@ end
 ---Saves retained data for the next frame under an id.
 ---@param id any
 ---@param data any
----@return Gui self
 function m_gui:push_data(id, data)
 	self.data_forward[id] = data
-	return self
 end
 
 ---Retrieves retained data under an id from the last frame.
