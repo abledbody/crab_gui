@@ -155,7 +155,10 @@ function m_gui:find_hot(mouse_pt, layer)
 	return nil
 end
 
+---@alias EventType "entered" | "exited" | "pressed" | "released"
+
 ---Generates the set of events that have occured since the last flush.
+---@return {variant: EventType, id: any}[] events
 function m_gui:event_step()
 	local new_hot = self:find_hot(mouselib.pos, self.layer_stack[1])
 	

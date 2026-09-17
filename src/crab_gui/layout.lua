@@ -1,7 +1,30 @@
 ---A rectangle defined by two 2D points.
 ---@class Bounds
----@field min userdata
----@field max userdata
+---@field size userdata?
+local m_bounds = {}
+m_bounds.__index = m_bounds
+
+---@return userdata
+function m_bounds:get_size()
+	if self.size then return self.size end
+	
+	self.size = self.max // 1 - self.min // 1
+	return self.size
+end
+
+---Creates a set of bounds from the low and high corners.
+---@param min userdata
+---@param max userdata
+---@return Bounds
+local function new_bounds(min, max)
+	---@class Bounds
+	local bounds = {
+		min = min,
+		max = max,
+	}
+	
+	return setmetatable(bounds, m_bounds)
+end
 
 ---@class UiRect
 local m_rect = {}
@@ -23,10 +46,7 @@ function m_rect:bounds(parent_bounds)
 	local min_pos = parent_bounds.min + parent_size * self.anchor_min
 	local max_pos = parent_bounds.min + parent_size * self.anchor_max
 	
-	return {
-		min = min_pos + self.offset_min,
-		max = max_pos + self.offset_max,
-	}
+	return new_bounds(min_pos + self.offset_min, max_pos + self.offset_max)
 end
 
 ---Creates a new UiRect.

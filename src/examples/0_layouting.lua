@@ -1,21 +1,7 @@
 local crab = require"src/crab_gui/gui"
 local crab_layout = require"src/crab_gui/layout"
+local sw = require"src/crab_gui/std_widgets"
 local gui = crab.new()
-
----@param ctx RenderRequest
-local function draw_panel(ctx)
-	local bounds_min = ctx.bounds.min
-	local bounds_max = ctx.bounds.max
-	local size = bounds_max // 1 - bounds_min // 1
-	rrectfill(bounds_min.x, bounds_min.y, size.x, size.y, ctx.args.radius, ctx.args.col)
-end
-
----@param gui Gui
----@param radius number
----@param col integer
-local function panel(gui, radius, col)
-	gui:push_render(draw_panel, {radius = radius, col = col})
-end
 
 local left_panel_rect =
 	crab_layout.new_rect(vec(2, 2), vec(-1, -2), vec(0, 0), vec(0.3, 1))
@@ -33,22 +19,22 @@ local function do_gui()
 		vec(0.5, 0.5),
 		vec(math.cos(t() * 0.7) * 210 + 270, math.sin(t() * 0.8652) * 105 + 165)
 	))
-	panel(gui, 6, 1)
+	sw.panel(gui, 1, 6)
 	
 	gui:push_rect(left_panel_rect)
-	panel(gui, 2, 16)
+	sw.panel(gui, 16, 2)
 	
 	gui:push_rect(upper_left_panel_rect)
-	panel(gui, 2, 1)
+	sw.panel(gui, 1, 2)
 	gui:pop_rect()
 	gui:push_rect(lower_left_panel_rect)
-	panel(gui, 2, 1)
+	sw.panel(gui, 1, 2)
 	gui:pop_rect()
 	
 	gui:pop_rect()
 	
 	gui:push_rect(right_panel_rect)
-	panel(gui, 2, 16)
+	sw.panel(gui, 16, 2)
 	gui:pop_rect()
 	
 	gui:pop_rect()
