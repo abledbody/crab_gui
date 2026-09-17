@@ -27,58 +27,39 @@ function m_rect:bounds(parent_bounds)
 	}
 end
 
-local function new_rect_raw(offset_min, offset_max, anchor_min, anchor_max)
+---@param offset_min userdata?
+---@param offset_max userdata?
+---@param anchor_min userdata?
+---@param anchor_max userdata?
+---@return UiRect
+local function new_rect(offset_min, offset_max, anchor_min, anchor_max)
 	---@class UiRect
 	local rect = {
-		offset_min = offset_min,
-		offset_max = offset_max,
-		anchor_min = anchor_min,
-		anchor_max = anchor_max,
+		offset_min = offset_min or vec(0, 0),
+		offset_max = offset_max or vec(0, 0),
+		anchor_min = anchor_min or vec(0, 0),
+		anchor_max = anchor_max or vec(1, 1),
 	}
 	
 	return setmetatable(rect, m_rect)
 end
 
----@class UiRectArguments
----@field offset_min userdata?
----@field offset_max userdata?
----@field anchor_min userdata?
----@field anchor_max userdata?
----@field offset userdata?
----@field size userdata?
-
----@param arguments UiRectArguments
+---@param anchor userdata
+---@param size userdata
+---@param offset userdata?
 ---@return UiRect
-local function new_rect(arguments)
-	local anchor_min = arguments.anchor_min
-		or vec(0, 0)
+local function new_rect_at(anchor, size, offset)
+	offset = offset or vec(0, 0)
 	
-	local anchor_max = arguments.anchor_max
-		or arguments.offset and anchor_min
-		or vec(1, 1)
-	
-	local offset_min = arguments.offset_min
-		or arguments.offset
-		or vec(0, 0)
-	
-	local offset_max = arguments.offset_max
-		or arguments.offset and offset_min
-		or vec(0, 0)
-	
-	if arguments.size then
-		offset_min -= arguments.size * anchor_min
-		offset_max += arguments.size * (1 - anchor_max)
-	end
-	
-	return new_rect_raw(
-		offset_min,
-		offset_max,
-		anchor_min,
-		anchor_max
+	return new_rect(
+		offset - size * anchor,
+		offset + size * (1 - anchor),
+		anchor,
+		anchor
 	)
 end
 
 return {
 	new_rect = new_rect,
-	new_rect_raw = new_rect_raw,
+	new_rect_at = new_rect_at,
 }

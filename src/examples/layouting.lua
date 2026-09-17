@@ -17,55 +17,38 @@ local function panel(gui, radius, col)
 	gui:push_render(draw_panel, {radius = radius, col = col})
 end
 
-local left_panel_rect = crab_layout.new_rect{
-	anchor_min = vec(0, 0),
-	anchor_max = vec(0.3, 1),
-	offset_min = vec(2, 2),
-	offset_max = vec(-1, -2),
-}
-local right_panel_rect = crab_layout.new_rect{
-	anchor_min = vec(0.3, 0),
-	anchor_max = vec(1, 1),
-	offset_min = vec(1, 2),
-	offset_max = vec(-2, -2),
-}
+local left_panel_rect =
+	crab_layout.new_rect(vec(2, 2), vec(-1, -2), vec(0, 0), vec(0.3, 1))
 
-local upper_left_panel_rect = crab_layout.new_rect{
-	anchor_min = vec(0, 0),
-	anchor_max = vec(1, 0),
-	offset_min = vec(2, 2),
-	offset_max = vec(-2, 20)
-}
+local right_panel_rect =
+	crab_layout.new_rect(vec(1, 2), vec(-2, -2), vec(0.3, 0), vec(1, 1))
 
-local lower_left_panel_rect = crab_layout.new_rect{
-	anchor_min = vec(0, 0),
-	anchor_max = vec(1, 1),
-	offset_min = vec(2, 22),
-	offset_max = vec(-2, -2)
-}
+local upper_left_panel_rect =
+	crab_layout.new_rect(vec(2, 2), vec(-2, 20), vec(0, 0), vec(1, 0))
+
+local lower_left_panel_rect = crab_layout.new_rect(vec(2, 22), vec(-2, -2))
 
 local function do_gui()
-	gui:push_rect(crab_layout.new_rect{
-		anchor_min = vec(0.5, 0.5),
-		anchor_max = vec(0.5, 0.5),
-		size = vec(math.cos(t() * 0.7) * 210 + 270, math.sin(t() * 0.8652) * 105 + 165),
-	})
+	gui:push_rect(crab_layout.new_rect_at(
+		vec(0.5, 0.5),
+		vec(math.cos(t() * 0.7) * 210 + 270, math.sin(t() * 0.8652) * 105 + 165)
+	))
 	panel(gui, 6, 1)
 	
 	gui:push_rect(left_panel_rect)
-	panel(gui, 3, 16)
+	panel(gui, 2, 16)
 	
 	gui:push_rect(upper_left_panel_rect)
-	panel(gui, 3, 1)
+	panel(gui, 2, 1)
 	gui:pop_rect()
 	gui:push_rect(lower_left_panel_rect)
-	panel(gui, 3, 1)
+	panel(gui, 2, 1)
 	gui:pop_rect()
 	
 	gui:pop_rect()
 	
 	gui:push_rect(right_panel_rect)
-	panel(gui, 3, 16)
+	panel(gui, 2, 16)
 	gui:pop_rect()
 	
 	gui:pop_rect()
