@@ -1,11 +1,13 @@
----@class UiRect
-local m_rect = {}
-m_rect.__index = m_rect
-
+---A rectangle defined by two 2D points.
 ---@class Bounds
 ---@field min userdata
 ---@field max userdata
 
+---@class UiRect
+local m_rect = {}
+m_rect.__index = m_rect
+
+---Reifies the bounds of the UiRect based on the parent's bounds.
 ---@param parent_bounds Bounds?
 ---@return Bounds
 function m_rect:bounds(parent_bounds)
@@ -27,10 +29,11 @@ function m_rect:bounds(parent_bounds)
 	}
 end
 
----@param offset_min userdata?
----@param offset_max userdata?
----@param anchor_min userdata?
----@param anchor_max userdata?
+---Creates a new UiRect.
+---@param offset_min userdata? The position of the low corner relative to the low anchor. Defaults to `0, 0`
+---@param offset_max userdata? The position of the high corner relative to the high anchor. Defaults to `0, 0`
+---@param anchor_min userdata? How far from the parent bounds' low corner to its high corner the minimum anchor of the UiRect is as a perunitage. Defaults to `0, 0`
+---@param anchor_max userdata? How far from the parent bounds' low corner to its high corner the maximum anchor of the UiRect is as a perunitage. Defaults to `1, 1`
 ---@return UiRect
 local function new_rect(offset_min, offset_max, anchor_min, anchor_max)
 	---@class UiRect
@@ -44,9 +47,20 @@ local function new_rect(offset_min, offset_max, anchor_min, anchor_max)
 	return setmetatable(rect, m_rect)
 end
 
----@param anchor userdata
----@param size userdata
----@param offset userdata?
+---Creates a new UiRect with a fixed size, assuming that the minimum and maximum
+---anchors are the same.
+---
+---The anchor is both where on the parent bounds the UiRect will be positioned
+---relative to, and also the fraction of the size that will extend past the low corner.
+---
+---An anchor of `0, 0` will put the anchor on the top left corner of the UiRect.
+---
+---An anchor of `1, 1` will put the anchor on the bottom right corner of the UiRect.
+---
+---An anchor of `0.5, 0.5` will put the anchor in the centerof the UiRect.
+---@param anchor userdata How far from the parent bounds' low corner to its high corner both anchors of the UiRect are as a perunitage.
+---@param size userdata The width and height of the UiRect.
+---@param offset userdata? How far the UiRect will be shifted relative to the anchor position.
 ---@return UiRect
 local function new_rect_at(anchor, size, offset)
 	offset = offset or vec(0, 0)

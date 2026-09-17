@@ -2,16 +2,19 @@ local mouselib = require"src/mouse"
 
 local insert, remove = table.insert, table.remove
 
+---The metatable and index target for the Gui class.
 ---@class Gui
 local m_gui = {}
 m_gui.__index = m_gui
 
+---Pushes a child rect to the stack relative to the current rect.
 ---@param rect UiRect
 function m_gui:push_rect(rect)
 	self.bounds = rect:bounds(self.bounds)
 	insert(self.bounds_stack, self.bounds)
 end
 
+---Removes a rect from the stack, and restores its parent rect.
 ---@return Bounds?
 function m_gui:pop_rect()
 	local old_bounds = remove(self.bounds_stack)
@@ -19,12 +22,16 @@ function m_gui:pop_rect()
 	return old_bounds
 end
 
+---A sorting layer. Render requests and interactables are always below children,
+---and children are sorted by priority, with the highest in front.
 ---@class Layer
 ---@field priority number?
 ---@field children [Layer]?
 ---@field render_requests [RenderRequest]
 ---@field interactables [Interactable]
 
+---Pushes a sorting layer to the stack, to be sorted by the parent layer. Further
+---render requests and interactables will be put on that layer.
 ---@param priority number
 function m_gui:push_layer(priority)
 	self.layer.children = self.layer.children or {}
@@ -41,6 +48,8 @@ function m_gui:push_layer(priority)
 	self.layer = layer
 end
 
+---Pops a sorting layer from the stack, restoring the parent layer as the render
+---request and interactable target.
 ---@return Layer
 function m_gui:pop_layer()
 	if #self.layer_stack <= 1 then
@@ -52,12 +61,14 @@ function m_gui:pop_layer()
 	return old_layer
 end
 
+---A deferred request to render a widget.
 ---@class RenderRequest
 ---@field render fun(ctx: RenderRequest, data: any)
 ---@field args any
 ---@field id any?
 ---@field bounds Bounds
 
+---Creates a request to render a widget at the current layer and in the current bounds.
 ---@param render fun(ctx: RenderRequest, data: any)
 ---@param args any
 ---@param id any?
@@ -73,13 +84,15 @@ function m_gui:push_render(render, args, id)
 	)
 end
 
+---An interaction target for the mouse and keyboard.
 ---@class Interactable
----@field intersect fun(ctx: Interactable, pt: userdata, data: any): boolean
----@field id any
----@field bounds Bounds
+---@field intersect fun(ctx: Interactable, pt: userdata, data: any): boolean The intersection test function.
+---@field id any Arbitrary data for identifying the source of the interactable.
+---@field bounds Bounds The bounds of the interactable area.
 
----@param intersect? fun(ctx: Interactable, pt: userdata, data: any): boolean
----@param id any
+---Creates an interaction target on the current layer and in the current bounds.
+---@param intersect? fun(ctx: Interactable, pt: userdata, data: any): boolean The intersection test function.
+---@param id any Arbitrary data for identifying the source of the interactable.
 function m_gui:push_interactable(intersect, id)
 	insert(
 		self.layer.interactables,
@@ -91,11 +104,12 @@ function m_gui:push_interactable(intersect, id)
 	)
 end
 
+---Iterates a table ordered by a key in that table.
 ---@generic T
 ---@param table [T]
 ---@param key any
 ---@param descending boolean?
----@return fun():entry: T?, iteration: integer?, index: integer?
+---@return fun():entry: T?, iteration: integer?, index: integer? @An iterator over every element in `table` in sorted order.
 local function iter_ordered(table, key, descending)
 	local ud = userdata("f64", 2, #table)
 	for i = 1, #table do
@@ -113,9 +127,10 @@ local function iter_ordered(table, key, descending)
 	end
 end
 
----@param mouse_pt userdata
----@param layer Layer
----@return Interactable?
+---Finds the topmost interactable under the mouse.
+---@param mouse_pt userdata Position of the mouse in draw surface coordinates.
+---@param layer Layer The layer in which to check for the hot element.
+---@return Interactable? hot
 function m_gui:find_hot(mouse_pt, layer)
 	if layer.children then
 		for child in iter_ordered(layer.children, "priority", true) do
@@ -140,6 +155,7 @@ function m_gui:find_hot(mouse_pt, layer)
 	return nil
 end
 
+---Generates the set of events that have occured since the last flush.
 function m_gui:event_step()
 	local new_hot = self:find_hot(mouselib.pos, self.layer_stack[1])
 	
@@ -221,10 +237,16 @@ function m_gui:event_step()
 	return events
 end
 
+---Saves retained data for the next frame under an id.
+---@param id any
+---@param data any
 function m_gui:push_data(id, data)
 	self.data_forward[id] = data
 end
 
+---Retrieves retained data under an id from the last frame.
+---@param id any
+---@return any
 function m_gui:pull_data(id)
 	return self.data_retained[id]
 end
@@ -242,10 +264,15 @@ function m_gui:draw_children(layer)
 	end
 end
 
+---Draws all render requests in painter's algorithm order.
 function m_gui:draw()
 	self:draw_children(self.layer_stack[1])
 end
 
+---Resets GUI buffers for the next frame.
+--- - Resets the active bounds and bounds stack
+--- - Resets the active layer and layer stack
+--- - Shifts `data_forward` to `data_retained`, and resets the forward data.
 function m_gui:flush()
 	self.bounds = nil
 	self.bounds_stack = {}
@@ -261,6 +288,7 @@ function m_gui:flush()
 	self.data_forward = {}
 end
 
+---Creates a new GUI system.
 ---@return Gui
 local function new()
 	---@type Layer
@@ -286,4 +314,6 @@ end
 
 return {
 	new = new,
+	
+	m_gui = m_gui,
 }
