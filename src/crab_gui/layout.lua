@@ -94,6 +94,7 @@ local function new_rect_at(anchor, size, offset)
 end
 
 return {
+	new_bounds = new_bounds,
 	new_rect = new_rect,
 	new_rect_at = new_rect_at,
 }

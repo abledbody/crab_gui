@@ -1,4 +1,5 @@
 local mouselib = require"src/mouse"
+local layout = require"src/crab_gui/layout"
 
 local insert, remove = table.insert, table.remove
 
@@ -277,7 +278,8 @@ end
 --- - Resets the active layer and layer stack
 --- - Shifts `data_forward` to `data_retained`, and resets the forward data.
 function m_gui:flush()
-	self.bounds = nil
+	local sw, sh = get_draw_target():attribs()
+	self.bounds = layout.new_bounds(vec(0, 0), vec(sw, sh))
 	self.bounds_stack = {}
 	
 	local master_layer = {
@@ -299,12 +301,13 @@ local function new()
 		render_requests = {},
 		interactables = {},
 	}
+	local sw, sh = get_draw_target():attribs()
 	
 	---@class Gui
-	---@field bounds Bounds?
 	---@field hot Interactable?
 	local gui = {
 		bounds_stack = {}, ---@type [Bounds]
+		bounds = layout.new_bounds(vec(0, 0), vec(sw, sh)),
 		layer_stack = {master_layer}, ---@type [Layer]
 		layer = master_layer,
 		data_retained = {}, ---@type table<any, any>

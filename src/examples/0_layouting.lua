@@ -1,7 +1,9 @@
 local crab = require"src/crab_gui/gui"
 local crab_layout = require"src/crab_gui/layout"
 local sw = require"src/crab_gui/std_widgets"
+local text_rendering = require"src/crab_gui/text_rendering"
 local gui = crab.new()
+local font_cache = text_rendering.new_font_cache()
 
 local left_panel_rect =
 	crab_layout.new_rect(vec(2, 2), vec(-1, -2), vec(0, 0), vec(0.3, 1))
@@ -13,6 +15,8 @@ local upper_left_panel_rect =
 	crab_layout.new_rect(vec(2, 2), vec(-2, 20), vec(0, 0), vec(1, 0))
 
 local lower_left_panel_rect = crab_layout.new_rect(vec(2, 22), vec(-2, -2))
+
+local font_style = text_rendering.default_style{col = 7, halign = "center", valign = "center"}
 
 local function do_gui()
 	gui:push_rect(crab_layout.new_rect_at(
@@ -26,6 +30,7 @@ local function do_gui()
 	
 	gui:push_rect(upper_left_panel_rect)
 	sw.panel(gui, 1, 2)
+	sw.text(gui, font_cache, "\^o0ffWow!", font_style)
 	gui:pop_rect()
 	gui:push_rect(lower_left_panel_rect)
 	sw.panel(gui, 1, 2)
