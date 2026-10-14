@@ -8,19 +8,20 @@ local insert, remove = table.insert, table.remove
 local m_gui = {}
 m_gui.__index = m_gui
 
----Pushes a child rect to the stack relative to the current rect.
----@param rect UiRect
-function m_gui:push_rect(rect)
-	self.bounds = rect:bounds(self.bounds)
-	insert(self.bounds_stack, self.bounds)
+---Pushes a child rect to the stack as a child of the current rect.
+---@param constraints Constraints
+function m_gui:push_rect(constraints)
+	local rect = layout.new_rect(self.rect, constraints)
+	insert(self.rect_stack, rect)
+	self.rect = rect
 end
 
 ---Removes a rect from the stack, and restores its parent rect.
----@return Bounds?
+---@return GuiRect?
 function m_gui:pop_rect()
-	local old_bounds = remove(self.bounds_stack)
-	self.bounds = self.bounds_stack[#self.bounds_stack]
-	return old_bounds
+	local old_rect = remove(self.rect_stack)
+	self.rect = self.rect_stack[#self.rect_stack]
+	return old_rect
 end
 
 ---A sorting layer. Render requests and interactables are always below children,
@@ -67,7 +68,7 @@ end
 ---@field render fun(ctx: RenderRequest, data: any)
 ---@field args any
 ---@field id any?
----@field bounds Bounds
+---@field rect GuiRect
 
 ---Creates a request to render a widget at the current layer and in the current bounds.
 ---@param render fun(ctx: RenderRequest, data: any)
@@ -80,7 +81,7 @@ function m_gui:push_render(render, args, id)
 			render = render,
 			args = args,
 			id = id,
-			bounds = self.bounds,
+			rect = self.rect,
 		} --[[@as RenderRequest]]
 	)
 end
@@ -89,7 +90,7 @@ end
 ---@class Interactable
 ---@field intersect fun(ctx: Interactable, pt: userdata, data: any): boolean The intersection test function.
 ---@field id any Arbitrary data for identifying the source of the interactable.
----@field bounds Bounds The bounds of the interactable area.
+---@field rect GuiRect The rect that defines the bounds of the interactable area.
 
 ---Creates an interaction target on the current layer and in the current bounds.
 ---@param intersect? fun(ctx: Interactable, pt: userdata, data: any): boolean The intersection test function.
@@ -100,7 +101,7 @@ function m_gui:push_interactable(intersect, id)
 		{
 			intersect = intersect or function() return true end,
 			id = id,
-			bounds = self.bounds,
+			rect = self.rect,
 		} --[[@as Interactable]]
 	)
 end
@@ -143,10 +144,11 @@ function m_gui:find_hot(mouse_pt, layer)
 	for i = #layer.interactables, 1, -1 do
 		local interactable = layer.interactables[i]
 		
-		if mouse_pt.x > interactable.bounds.min.x
-			and mouse_pt.y > interactable.bounds.min.y
-			and mouse_pt.x <= interactable.bounds.max.x
-			and mouse_pt.y <= interactable.bounds.max.y
+		local bounds = interactable.rect:get_bounds()
+		if mouse_pt.x > bounds.min.x
+			and mouse_pt.y > bounds.min.y
+			and mouse_pt.x <= bounds.max.x
+			and mouse_pt.y <= bounds.max.y
 			and interactable:intersect(mouse_pt, self.data_forward[interactable.id])
 		then
 			return interactable
@@ -278,9 +280,8 @@ end
 --- - Resets the active layer and layer stack
 --- - Shifts `data_forward` to `data_retained`, and resets the forward data.
 function m_gui:flush()
-	local sw, sh = get_draw_target():attribs()
-	self.bounds = layout.new_bounds(vec(0, 0), vec(sw, sh))
-	self.bounds_stack = {}
+	self.rect = layout.new_rect(nil, (layout.constraints_of_target(get_draw_target())))
+	self.rect_stack = {self.rect}
 	
 	local master_layer = {
 		render_requests = {},
@@ -301,13 +302,14 @@ local function new()
 		render_requests = {},
 		interactables = {},
 	}
-	local sw, sh = get_draw_target():attribs()
+	
+	local root = layout.new_rect(nil, (layout.constraints_of_target(get_draw_target())))
 	
 	---@class Gui
 	---@field hot Interactable?
 	local gui = {
-		bounds_stack = {}, ---@type [Bounds]
-		bounds = layout.new_bounds(vec(0, 0), vec(sw, sh)),
+		rect = root,
+		rect_stack = {root}, ---@type [GuiRect]
 		layer_stack = {master_layer}, ---@type [Layer]
 		layer = master_layer,
 		data_retained = {}, ---@type table<any, any>

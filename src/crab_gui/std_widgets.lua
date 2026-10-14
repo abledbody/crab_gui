@@ -4,9 +4,9 @@ local discard_surface = userdata("u8", 1, 1)
 
 ---@param ctx RenderRequest
 local function draw_panel(ctx)
-	local bounds_min = ctx.bounds.min
-	local bounds_size = ctx.bounds:get_size()
-	rrectfill(bounds_min.x, bounds_min.y, bounds_size.x, bounds_size.y, ctx.args.radius, ctx.args.col)
+	local bounds = ctx.rect:get_bounds()
+	local bounds_size = bounds:get_size()
+	rrectfill(bounds.min.x, bounds.min.y, bounds_size.x, bounds_size.y, ctx.args.radius, ctx.args.col)
 end
 
 ---@param gui Gui
@@ -59,8 +59,9 @@ local function draw_text(ctx)
 		font_cache:get_active(false).descender_height,
 		font_cache:get_active(true).descender_height
 	)
-	local x = text_halign[style.halign](ctx.bounds, width)
-	local y = text_valign[style.valign](ctx.bounds, height)
+	local bounds = ctx.rect:get_bounds()
+	local x = text_halign[style.halign](bounds, width)
+	local y = text_valign[style.valign](bounds, height)
 	
 	print(ctx.args.str, x, y, style.col)
 end
