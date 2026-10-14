@@ -173,15 +173,15 @@ local function anchors_and_offsets(offset_min, offset_max, anchor_min, anchor_ma
 end
 
 ---@param self Constraints
----@param top_margin number
+---@param parent_offset number
 ---@param spacing number
 ---@return Constraints
-function m_constraints.after_sibling(self, controlled_key, sibling_key, top_margin, spacing)
+function m_constraints.after_sibling(self, controlled_key, sibling_key, parent_offset, spacing)
 	self[controlled_key] = function(rect)
 		if rect.prev_sibling then
 			return rect.prev_sibling:get_value(sibling_key, 0) + spacing
 		else
-			return rect.parent:get_value(controlled_key, 0) + top_margin
+			return rect.parent:get_value(controlled_key, 0) + parent_offset
 		end
 	end
 	
