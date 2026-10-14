@@ -16,6 +16,10 @@ local c_upper_left_panel =
 
 local c_lower_left_panel = crab_layout.anchors_and_offsets(vec(2, 22), vec(-2, -2))
 
+local c_left_panel_item = crab_layout.anchors_and_offsets(vec(2, 2), vec(-2, -2))
+	:after_sibling("y_min", "y_max", 2, 1)
+	:size_from_edge("y_max", "y_min", 12)
+
 local font_style = text_rendering.default_style{col = 7, halign = "center", valign = "center"}
 
 local function do_gui()
@@ -32,8 +36,15 @@ local function do_gui()
 	sw.panel(gui, 1, 2)
 	sw.text(gui, font_cache, "\^o0ffWow!", font_style)
 	gui:pop_rect()
+	
 	gui:push_rect(c_lower_left_panel)
 	sw.panel(gui, 1, 2)
+	for i = 1, 10 do
+		gui:push_rect(c_left_panel_item)
+		sw.panel(gui, 16, 2)
+		sw.text(gui, font_cache, "\^o0ffItem "..i, font_style)
+		gui:pop_rect()
+	end
 	gui:pop_rect()
 	
 	gui:pop_rect()

@@ -74,7 +74,8 @@ end
 ---@return GuiRect
 local function new_rect(parent, constraints)
 	---@class GuiRect
-	---@field parent GuiRect
+	---@field next_sibling GuiRect?
+	---@field prev_sibling GuiRect?
 	---@field x_min number?
 	---@field y_min number?
 	---@field x_max number?
@@ -86,7 +87,11 @@ local function new_rect(parent, constraints)
 	}
 	
 	if parent then
+		rect.prev_sibling = parent.children[#parent.children]
 		insert(parent.children, rect)
+		if rect.prev_sibling then
+			rect.prev_sibling.next_sibling = rect
+		end
 	end
 	
 	rect.parent = parent or rect
@@ -120,16 +125,6 @@ local function new_constraints(x_min, y_min, x_max, y_max)
 	return setmetatable(constraints, m_constraints)
 end
 
----@param offset_min number
----@param offset_max number
----@param anchor_min number
----@param anchor_max number
-local function solve_offset_anchor(parent_min, parent_max, offset_min, offset_max, anchor_min, anchor_max)
-	local parent_size = parent_max - parent_min
-	return offset_min + parent_min + parent_size * anchor_min,
-		offset_max + parent_min + parent_size * anchor_max
-end
-
 ---Applies the constraints of an anchored rectangle
 ---@param offset_min userdata? The position of the low corner relative to the low anchor. Defaults to `0, 0`
 ---@param offset_max userdata? The position of the high corner relative to the high anchor. Defaults to `0, 0`
@@ -151,38 +146,57 @@ local function anchors_and_offsets(offset_min, offset_max, anchor_min, anchor_ma
 			local parent_min = rect.parent:get_value("x_min", 0)
 			local parent_max = rect.parent:get_value("x_max", 16)
 			
-			rect.x_min, rect.x_max =
-				solve_offset_anchor(parent_min, parent_max, ox0, ox1, ax0, ax1)
-			return rect.x_min
+			return (parent_max - parent_min) * ax0 + parent_min + ox0
 		end,
 	
 		function(rect)
 			local parent_min = rect.parent:get_value("y_min", 0)
 			local parent_max = rect.parent:get_value("y_max", 16)
 			
-			rect.y_min, rect.y_max =
-				solve_offset_anchor(parent_min, parent_max, oy0, oy1, ay0, ay1)
-			return rect.y_min
+			return (parent_max - parent_min) * ay0 + parent_min + oy0
 		end,
 	
 		function(rect)
 			local parent_min = rect.parent:get_value("x_min", 0)
 			local parent_max = rect.parent:get_value("x_max", 16)
 			
-			rect.x_min, rect.x_max =
-				solve_offset_anchor(parent_min, parent_max, ox0, ox1, ax0, ax1)
-			return rect.x_max
+			return (parent_max - parent_min) * ax1 + parent_min + ox1
 		end,
 	
 		function(rect)
 			local parent_min = rect.parent:get_value("y_min", 0)
 			local parent_max = rect.parent:get_value("y_max", 16)
 			
-			rect.y_min, rect.y_max =
-				solve_offset_anchor(parent_min, parent_max, oy0, oy1, ay0, ay1)
-			return rect.y_max
+			return (parent_max - parent_min) * ay1 + parent_min + oy1
 		end
 	)
+end
+
+---@param self Constraints
+---@param top_margin number
+---@param spacing number
+---@return Constraints
+function m_constraints.after_sibling(self, controlled_key, sibling_key, top_margin, spacing)
+	self[controlled_key] = function(rect)
+		if rect.prev_sibling then
+			return rect.prev_sibling:get_value(sibling_key, 0) + spacing
+		else
+			return rect.parent:get_value(controlled_key, 0) + top_margin
+		end
+	end
+	
+	return self
+end
+
+---@param controlled_key string
+---@param opposite_key string
+---@param size number
+function m_constraints:size_from_edge(controlled_key, opposite_key, size)
+	self[controlled_key] = function(rect)
+		return rect:get_value(opposite_key, 0) + size
+	end
+	
+	return self
 end
 
 ---Creates a new UiRect with a fixed size, assuming that the minimum and maximum
