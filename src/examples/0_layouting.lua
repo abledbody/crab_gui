@@ -17,7 +17,17 @@ local c_upper_left_panel =
 local c_lower_left_panel = layout.anchor_offset_all(nil, nil, vec(2, 22), vec(-2, -2))
 
 local c_left_panel_item =
-	layout.array(2, 2, 2, 1, "down", layout.size_from_edge(12, "min_y"))
+	layout.array(2, 2, 2, 1, "down", layout.offset_from_edge(12, "min_y"))
+
+local c_right_panel_item = layout.new_constraints(
+	layout.offset_from_edge(-70, "max_x"),
+	layout.offset_from_rect("parent", "min_y", 4),
+	layout.after_sibling(-4, -4, "max_x", "min_x"),
+	layout.sum(
+		layout.offset_from_rect("parent", "min_y", 4),
+		layout.cross_ratio(0.5, "min_x", "max_x")
+	)
+)
 
 local font_style = text_rendering.default_style{col = 7, halign = "center", valign = "center"}
 
@@ -27,6 +37,16 @@ local function do_gui()
 		vec(math.cos(t() * 0.7) * 210 + 270, math.sin(t() * 0.8652) * 105 + 165)
 	))
 	sw.panel(gui, 1, 6)
+	
+	gui:push_rect(c_right_panel)
+	sw.panel(gui, 16, 2)
+	
+	for _ = 1, 3 do
+		gui:push_rect(c_right_panel_item)
+		sw.panel(gui, 1, 4)
+		gui:pop_rect()
+	end
+	gui:pop_rect()
 	
 	gui:push_rect(c_left_panel)
 	sw.panel(gui, 16, 2)
@@ -38,6 +58,7 @@ local function do_gui()
 	
 	gui:push_rect(c_lower_left_panel)
 	sw.panel(gui, 1, 2)
+	
 	for i = 1, 10 do
 		gui:push_rect(c_left_panel_item)
 		sw.panel(gui, 16, 2)
@@ -46,10 +67,6 @@ local function do_gui()
 	end
 	gui:pop_rect()
 	
-	gui:pop_rect()
-	
-	gui:push_rect(c_right_panel)
-	sw.panel(gui, 16, 2)
 	gui:pop_rect()
 	
 	gui:pop_rect()

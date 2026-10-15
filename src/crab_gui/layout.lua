@@ -160,7 +160,7 @@ end
 ---@param source_key string
 ---@param offset number
 ---@return ConstraintSolver
-local function align(relationship_key, source_key, offset)
+local function offset_from_rect(relationship_key, source_key, offset)
 	return function(rect)
 		return rect[relationship_key]:get_value(source_key) + offset
 	end
@@ -172,7 +172,7 @@ end
 ---@param min_key string The parent's minimum key on this axis.
 ---@param max_key string The parent's maximum key on this axis.
 ---@return ConstraintSolver
-local function anchor_offset(anchor, offset, min_key, max_key)
+local function offset_from_anchor(anchor, offset, min_key, max_key)
 	return function(rect)
 		local parent_min = rect.parent:get_value(min_key)
 		local parent_max = rect.parent:get_value(max_key)
@@ -191,8 +191,8 @@ end
 local function after_sibling(parent_offset, sibling_offset, parent_key, sibling_key)
 	return switch(
 		"prev_sibling",
-		align("prev_sibling", sibling_key, sibling_offset),
-		align("parent", parent_key, parent_offset)
+		offset_from_rect("prev_sibling", sibling_key, sibling_offset),
+		offset_from_rect("parent", parent_key, parent_offset)
 	)
 end
 
@@ -200,7 +200,7 @@ end
 ---@param offset number The offset from the reference edge.
 ---@param reference_key string The key to the reference edge.
 ---@return ConstraintSolver
-local function size_from_edge(offset, reference_key)
+local function offset_from_edge(offset, reference_key)
 	return function(rect)
 		return rect:get_value(reference_key) + offset
 	end
@@ -213,35 +213,35 @@ end
 ---@param margin_cross_max number The margin from the parent on the parent's high side.
 ---@param spacing number The space in between two sibling rects.
 ---@param direction Direction The direction from which the array expands.
----@param size_solver ConstraintSolver The solver for the far edge of the item. If you want a fixed size, use `size_from_edge`.
+---@param size_solver ConstraintSolver The solver for the far edge of the item. If you want a fixed size, use `offset_from_edge`.
 ---@return Constraints
 local function array(margin_start, margin_cross_min, margin_cross_max, spacing, direction, size_solver)
 	if direction == "right" then
 		return new_constraints(
 			after_sibling(margin_start, spacing, "min_x", "max_x"),
-			align("parent", "min_y", margin_cross_min),
+			offset_from_rect("parent", "min_y", margin_cross_min),
 			size_solver,
-			align("parent", "max_y", -margin_cross_max)
+			offset_from_rect("parent", "max_y", -margin_cross_max)
 		)
 	elseif direction == "down" then
 		return new_constraints(
-			align("parent", "min_x", margin_cross_min),
+			offset_from_rect("parent", "min_x", margin_cross_min),
 			after_sibling(margin_start, spacing, "min_y", "max_y"),
-			align("parent", "max_x", -margin_cross_max),
+			offset_from_rect("parent", "max_x", -margin_cross_max),
 			size_solver
 		)
 	elseif direction == "left" then
 		return new_constraints(
 			size_solver,
-			align("parent", "min_y", margin_cross_min),
+			offset_from_rect("parent", "min_y", margin_cross_min),
 			after_sibling(-margin_start, -spacing, "max_x", "min_x"),
-			align("parent", "max_y", -margin_cross_max)
+			offset_from_rect("parent", "max_y", -margin_cross_max)
 		)
 	elseif direction == "up" then
 		return new_constraints(
-			align("parent", "min_x", margin_cross_min),
+			offset_from_rect("parent", "min_x", margin_cross_min),
 			size_solver,
-			align("parent", "max_x", -margin_cross_max),
+			offset_from_rect("parent", "max_x", -margin_cross_max),
 			after_sibling(-margin_start, -spacing, "max_y", "min_y")
 		)
 	else
@@ -273,22 +273,22 @@ end
 local function aspect_ratio(anchor, offset, ratio, side)
 	if side == "right" then
 		return sum(
-			anchor_offset(anchor, offset, "min_x", "max_x"),
+			offset_from_anchor(anchor, offset, "min_x", "max_x"),
 			cross_ratio(ratio, "min_y", "max_y")
 		)
 	elseif side == "bottom" then
 		return sum(
-			anchor_offset(anchor, offset, "min_y", "max_y"),
+			offset_from_anchor(anchor, offset, "min_y", "max_y"),
 			cross_ratio(ratio, "min_x", "max_x")
 		)
 	elseif side == "left" then
 		return sum(
-			anchor_offset(anchor, offset, "min_x", "max_x"),
+			offset_from_anchor(anchor, offset, "min_x", "max_x"),
 			cross_ratio(-ratio, "min_y", "max_y")
 		)
 	elseif side == "top" then
 		return sum(
-			anchor_offset(anchor, offset, "min_y", "max_y"),
+			offset_from_anchor(anchor, offset, "min_y", "max_y"),
 			cross_ratio(-ratio, "min_x", "max_x")
 		)
 	else
@@ -310,10 +310,10 @@ local function anchor_offset_all(anchor_min, anchor_max, offset_min, offset_max)
 	offset_max = offset_max or vec(0, 0)
 	
 	return new_constraints(
-		anchor_offset(anchor_min.x, offset_min.x, "min_x", "max_x"),
-		anchor_offset(anchor_min.y, offset_min.y, "min_y", "max_y"),
-		anchor_offset(anchor_max.x, offset_max.x, "min_x", "max_x"),
-		anchor_offset(anchor_max.y, offset_max.y, "min_y", "max_y")
+		offset_from_anchor(anchor_min.x, offset_min.x, "min_x", "max_x"),
+		offset_from_anchor(anchor_min.y, offset_min.y, "min_y", "max_y"),
+		offset_from_anchor(anchor_max.x, offset_max.x, "min_x", "max_x"),
+		offset_from_anchor(anchor_max.y, offset_max.y, "min_y", "max_y")
 	)
 end
 
@@ -364,15 +364,15 @@ return {
 	constraints_of_target = constraints_of_target,
 	anchor_offset_all = anchor_offset_all,
 	anchor_size_all = anchor_size_all,
+	array = array,
 	
 	switch = switch,
 	sum = sum,
-	align = align,
 	
-	anchor_offset = anchor_offset,
+	offset_from_rect = offset_from_rect,
+	offset_from_anchor = offset_from_anchor,
 	after_sibling = after_sibling,
-	size_from_edge = size_from_edge,
+	offset_from_edge = offset_from_edge,
 	cross_ratio = cross_ratio,
 	aspect_ratio = aspect_ratio,
-	array = array,
 }
