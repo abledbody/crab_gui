@@ -11,7 +11,7 @@ m_gui.__index = m_gui
 ---Pushes a child rect to the stack as a child of the current rect.
 ---@param constraints Constraints
 function m_gui:push_rect(constraints)
-	local rect = layout.new_rect(self.rect, constraints)
+	local rect = layout.new_rect(constraints, self.rect)
 	insert(self.rect_stack, rect)
 	self.rect = rect
 end
@@ -280,7 +280,7 @@ end
 --- - Resets the active layer and layer stack
 --- - Shifts `data_forward` to `data_retained`, and resets the forward data.
 function m_gui:flush()
-	self.rect = layout.new_rect(nil, (layout.constraints_of_target(get_draw_target())))
+	self.rect = layout.new_rect(layout.constraints_of_target(get_draw_target()))
 	self.rect_stack = {self.rect}
 	
 	local master_layer = {
@@ -303,7 +303,7 @@ local function new()
 		interactables = {},
 	}
 	
-	local root = layout.new_rect(nil, (layout.constraints_of_target(get_draw_target())))
+	local root = layout.new_rect(layout.constraints_of_target(get_draw_target()))
 	
 	---@class Gui
 	---@field hot Interactable?

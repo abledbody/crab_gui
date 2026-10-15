@@ -33,11 +33,11 @@ local function do_gui()
 	sw.text(gui, font_cache, "bottom center", bottom_center_style)
 	sw.text(gui, font_cache, "bottom right" , bottom_right_style)
 	
-	gui:push_rect(crab_layout.anchors_and_offsets(nil, nil, vec(0, 0), vec(0.5, 0.5)))
+	gui:push_rect(crab_layout.anchor_offset_all(vec(0, 0), vec(0.5, 0.5)))
 	sw.text(gui, font_cache, "lil \014& lil_mono", fonts_style_1)
 	gui:pop_rect()
 	
-	gui:push_rect(crab_layout.anchors_and_offsets(nil, nil, vec(0.5, 0), vec(1, 0.5)))
+	gui:push_rect(crab_layout.anchor_offset_all(vec(0.5, 0), vec(1, 0.5)))
 	sw.text(gui, font_cache, "p8 \014& charcoal", fonts_style_2)
 	gui:pop_rect()
 end

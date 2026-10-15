@@ -1,29 +1,28 @@
 local crab = require"src/crab_gui/gui"
-local crab_layout = require"src/crab_gui/layout"
+local layout = require"src/crab_gui/layout"
 local sw = require"src/crab_gui/std_widgets"
 local text_rendering = require"src/crab_gui/text_rendering"
 local gui = crab.new()
 local font_cache = text_rendering.new_font_cache()
 
 local c_left_panel =
-	crab_layout.anchors_and_offsets(vec(2, 2), vec(-1, -2), vec(0, 0), vec(0.3, 1))
+	layout.anchor_offset_all(vec(0, 0), vec(0.3, 1), vec(2, 2), vec(-1, -2))
 
 local c_right_panel =
-	crab_layout.anchors_and_offsets(vec(1, 2), vec(-2, -2), vec(0.3, 0), vec(1, 1))
+	layout.anchor_offset_all(vec(0.3, 0), vec(1, 1), vec(1, 2), vec(-2, -2))
 
 local c_upper_left_panel =
-	crab_layout.anchors_and_offsets(vec(2, 2), vec(-2, 20), vec(0, 0), vec(1, 0))
+	layout.anchor_offset_all(vec(0, 0), vec(1, 0), vec(2, 2), vec(-2, 20))
 
-local c_lower_left_panel = crab_layout.anchors_and_offsets(vec(2, 22), vec(-2, -2))
+local c_lower_left_panel = layout.anchor_offset_all(nil, nil, vec(2, 22), vec(-2, -2))
 
-local c_left_panel_item = crab_layout.anchors_and_offsets(vec(2, 2), vec(-2, -2))
-	:after_sibling("y_min", "y_max", 2, 1)
-	:size_from_edge("y_max", "y_min", 12)
+local c_left_panel_item =
+	layout.array(2, 2, 2, 1, "down", layout.size_from_edge(12, "min_y"))
 
 local font_style = text_rendering.default_style{col = 7, halign = "center", valign = "center"}
 
 local function do_gui()
-	gui:push_rect(crab_layout.anchor_and_size(
+	gui:push_rect(layout.anchor_size_all(
 		vec(0.5, 0.5),
 		vec(math.cos(t() * 0.7) * 210 + 270, math.sin(t() * 0.8652) * 105 + 165)
 	))
