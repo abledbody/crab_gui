@@ -1,4 +1,5 @@
 local max = math.max
+local floor = math.floor
 
 local discard_surface = userdata("u8", 1, 1)
 
@@ -13,7 +14,7 @@ end
 ---@param col integer? Defaults to 1
 ---@param radius number? Defaults to 1
 local function panel(gui, col, radius)
-	gui:push_render(draw_panel, {col = col or 1, radius = radius or 1})
+	gui:queue_render(draw_panel, {col = col or 1, radius = radius or 1})
 end
 
 local text_halign = {
@@ -22,7 +23,7 @@ local text_halign = {
 	end,
 	
 	center = function(bounds, width)
-		return bounds.min.x + (bounds:get_size().x - width) // 2
+		return bounds.min.x + bounds:get_size().x // 2 - width // 2
 	end,
 	
 	right = function(bounds, width)
@@ -36,7 +37,7 @@ local text_valign = {
 	end,
 	
 	center = function(bounds, height)
-		return bounds.min.y + (bounds:get_size().y - height) // 2
+		return bounds.min.y + bounds:get_size().y // 2 - height // 2
 	end,
 	
 	bottom = function(bounds, height)
@@ -75,14 +76,30 @@ end
 ---@param style FontStyle?
 ---@overload fun(gui: Gui, font_cache: FontCache, str: string, font_style: FontStyle)
 local function text(gui, font_cache, str, style)
-	gui:push_render(draw_text, {
+	gui:queue_render(draw_text, {
 		font_cache = font_cache,
 		str = str,
 		style = style,
 	})
 end
 
+---@param gui Gui
+---@param font_cache FontCache
+---@param col integer? Defaults to 1
+---@param str string?
+---@param font_style FontStyle?
+---@param radius number? Defaults to 1
+local function button(gui, id, font_cache, col, str, font_style, radius)
+	panel(gui, col, radius)
+	gui:queue_interactable(id)
+	
+	if str != nil then
+		text(gui, font_cache, str, font_style)
+	end
+end
+
 return {
 	panel = panel,
 	text = text,
+	button = button,
 }

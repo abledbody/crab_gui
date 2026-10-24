@@ -9,7 +9,7 @@ local m_gui = {}
 m_gui.__index = m_gui
 
 ---Pushes a child rect to the stack as a child of the current rect.
----@param constraints Constraints
+---@param constraints Solvers
 function m_gui:push_rect(constraints)
 	local rect = layout.new_rect(constraints, self.rect)
 	insert(self.rect_stack, rect)
@@ -74,7 +74,7 @@ end
 ---@param render fun(ctx: RenderRequest, data: any)
 ---@param args any
 ---@param id any?
-function m_gui:push_render(render, args, id)
+function m_gui:queue_render(render, args, id)
 	insert(
 		self.layer.render_requests,
 		{
@@ -93,14 +93,14 @@ end
 ---@field rect GuiRect The rect that defines the bounds of the interactable area.
 
 ---Creates an interaction target on the current layer and in the current bounds.
----@param intersect? fun(ctx: Interactable, pt: userdata, data: any): boolean The intersection test function.
 ---@param id any Arbitrary data for identifying the source of the interactable.
-function m_gui:push_interactable(intersect, id)
+---@param intersect? fun(ctx: Interactable, pt: userdata, data: any): boolean The intersection test function.
+function m_gui:queue_interactable(id, intersect)
 	insert(
 		self.layer.interactables,
 		{
-			intersect = intersect or function() return true end,
 			id = id,
+			intersect = intersect or function() return true end,
 			rect = self.rect,
 		} --[[@as Interactable]]
 	)
@@ -280,7 +280,7 @@ end
 --- - Resets the active layer and layer stack
 --- - Shifts `data_forward` to `data_retained`, and resets the forward data.
 function m_gui:flush()
-	self.rect = layout.new_rect(layout.constraints_of_target(get_draw_target()))
+	self.rect = layout.new_rect(layout.solvers_from_target(get_draw_target()))
 	self.rect_stack = {self.rect}
 	
 	local master_layer = {
@@ -303,7 +303,7 @@ local function new()
 		interactables = {},
 	}
 	
-	local root = layout.new_rect(layout.constraints_of_target(get_draw_target()))
+	local root = layout.new_rect(layout.solvers_from_target(get_draw_target()))
 	
 	---@class Gui
 	---@field hot Interactable?

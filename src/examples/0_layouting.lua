@@ -16,16 +16,22 @@ local c_upper_left_panel =
 
 local c_lower_left_panel = layout.anchor_offset_all(nil, nil, vec(2, 22), vec(-2, -2))
 
-local c_left_panel_item =
-	layout.array(2, 2, 2, 1, "down", layout.offset_from_edge(12, "min_y"))
+local c_left_panel_item = layout.new_solvers(
+	layout.anchor_offset_axis(0, 1, 2, -2, "horizontal"),
+	layout.axis_size_min(
+		layout.fixed(12),
+		layout.after_sibling(1, 2, "max_y", "min_y")
+	)
+)
 
-local c_right_panel_item = layout.new_constraints(
-	layout.offset_from_edge(-70, "max_x"),
-	layout.offset_from_rect("parent", "min_y", 4),
-	layout.after_sibling(-4, -4, "max_x", "min_x"),
-	layout.sum(
-		layout.offset_from_rect("parent", "min_y", 4),
-		layout.cross_ratio(0.5, "min_x", "max_x")
+local c_right_panel_item = layout.new_solvers(
+	layout.axis_size_max(
+		layout.fixed(70),
+		layout.after_sibling(-4, -4, "min_x", "max_x")
+	),
+	layout.axis_size_min(
+		layout.aspect_ratio(0.5, true),
+		layout.offset_from_edge("parent", 4, "min_y")
 	)
 )
 
@@ -33,6 +39,7 @@ local font_style = text_rendering.default_style{col = 7, halign = "center", vali
 
 local function do_gui()
 	gui:push_rect(layout.anchor_size_all(
+		vec(0.5, 0.5),
 		vec(0.5, 0.5),
 		vec(math.cos(t() * 0.7) * 210 + 270, math.sin(t() * 0.8652) * 105 + 165)
 	))
