@@ -42,6 +42,20 @@ local AXIS_TO_SIZE <const> = {
 	vertical = "size_y"
 }
 
+local DIRECTION_TO_EDGE <const> = {
+	right = "max_x",
+	down = "max_y",
+	left = "min_x",
+	up = "min_y"
+}
+
+local OPPOSITE_EDGE <const> = {
+	min_x = "max_x",
+	max_x = "min_x",
+	min_y = "max_y",
+	max_y = "min_y"
+}
+
 local DIRECTION_TO_AXIS <const> = {
 	right = "horizontal",
 	down = "vertical",
@@ -133,6 +147,7 @@ end
 local m_gui_rect = {}
 m_gui_rect.__index = m_gui_rect
 
+---Finds the root and offset of a chain of relative solvers.
 ---@param key string
 ---@return number offset_from_root
 ---@return GuiRect root_rect
@@ -190,6 +205,7 @@ function m_gui_rect:find_root(key)
 	return offset_from_root, root_rect, root_key
 end
 
+---Safely solves a dimension of a rect.
 ---@param key string
 ---@return number
 function m_gui_rect:get_value(key)
@@ -197,17 +213,21 @@ function m_gui_rect:get_value(key)
 	local cached_prop = self.cache[key]
 	if cached_prop then
 		if not cached_prop.absolute then
-			cached_prop.absolute =
+			local value =
 				cached_prop.root_rect:get_value(cached_prop.root_key)
 				+ cached_prop.relative
+			if value != value then return value end
+			cached_prop.absolute = value
 		end
 		return cached_prop.absolute
 	end
 	
 	-- Dependency cycle detection
 	if self.pending_absolute[key] then
-		cycle_rect_register = self
-		cycle_key_register = key
+		if not cycle_rect_register then
+			cycle_rect_register = self
+			cycle_key_register = key
+		end
 		return nan
 	end
 	
@@ -221,7 +241,12 @@ function m_gui_rect:get_value(key)
 	local value
 	if solver.is_relative(self) then
 		local offset, root_rect, root_key = self:find_root(key)
-		value = root_rect:get_value(root_key) + offset
+		if offset == offset then
+			value = root_rect:get_value(root_key) + offset
+		else
+			value = nan
+		end
+		cached_prop = self.cache[key]
 	else
 		self.pending_absolute[key] = true
 		value = solver.fn(self)
@@ -242,6 +267,8 @@ function m_gui_rect:get_value(key)
 	return value
 end
 
+---Safely gets the relative distance between two rect edges, even if they haven't been
+---fully solved yet.
 ---@param from_key string
 ---@param to_rect GuiRect
 ---@param to_key string
@@ -263,9 +290,11 @@ end
 ---@return Bounds
 function m_gui_rect:get_bounds()
 	if self.bounds then return self.bounds end
-	notify_cycle()
+	
 	local min = vec(self:get_value("min_x"), self:get_value("min_y"))
 	local max = vec(self:get_value("max_x"), self:get_value("max_y"))
+	
+	notify_cycle()
 	
 	self.bounds = new_bounds(min, max)
 	return self.bounds
@@ -273,7 +302,7 @@ end
 
 ---@param solvers Solvers
 ---@param parent GuiRect? Defaults to self. Only use nil for the top level.
----@param source_info debuginfo?
+---@param source_info debuginfo? Defaults to the call site.
 ---@return GuiRect
 local function new_rect(solvers, parent, source_info)
 	---@class GuiRect
@@ -301,11 +330,13 @@ local function new_rect(solvers, parent, source_info)
 	return setmetatable(rect, m_gui_rect)
 end
 
+---A set of solvers for one axis. Two are provided, and a third is inferred.
 ---@class AxisSolvers
 ---@field min Solver?
 ---@field max Solver?
 ---@field size Solver?
 
+---Infers size from min and max.
 ---@param min_solver Solver
 ---@param max_solver Solver
 ---@return AxisSolvers
@@ -316,6 +347,7 @@ local function axis_min_max(min_solver, max_solver)
 	}
 end
 
+---Infers max from size and min.
 ---@param size_solver Solver
 ---@param min_solver Solver
 ---@return AxisSolvers
@@ -326,6 +358,7 @@ local function axis_size_min(size_solver, min_solver)
 	}
 end
 
+---Infers min from size and max.
 ---@param size_solver Solver
 ---@param max_solver Solver
 ---@return AxisSolvers
@@ -413,6 +446,7 @@ local function new_solvers(h_solvers, v_solvers)
 	return setmetatable(solvers, m_solvers)
 end
 
+---Returns an absolute value. Can never cause a cycle.
 ---@param value number
 ---@return AbsoluteSolver
 local function fixed(value)
@@ -422,29 +456,34 @@ local function fixed(value)
 	}
 end
 
+---Switches between two solvers depending on whether the rect has the specified
+---sibling.
 ---@param relation Relation
----@param true_solver Solver
----@param false_solver Solver
+---@param present_solver Solver
+---@param absent_solver Solver
 ---@return Solver
-local function switch_on_sibling(relation, true_solver, false_solver)
+local function switch_on_sibling(relation, present_solver, absent_solver)
 	return {
 		is_relative = function(rect)
-			return rect[relation]
-				and true_solver.is_relative(rect)
-				or false_solver.is_relative(rect)
+			if rect[relation] then
+				return present_solver.is_relative(rect)
+			else
+				return absent_solver.is_relative(rect)
+			end
 		end,
 		fn = function(rect)
 			if rect[relation] then
-				return true_solver.fn(rect)
+				return present_solver.fn(rect)
 			else
-				return false_solver.fn(rect)
+				return absent_solver.fn(rect)
 			end
 		end
 	}
 end
 
----@param anchor number
----@param offset number
+---Places the edge at an offset from a certain perunitage across the rect's parent.
+---@param anchor number The relative position of the edge to the parent before the offset is applied.
+---@param offset number The absolute offset from the anchor.
 ---@param axis_key Axis
 ---@return AbsoluteSolver
 local function anchor_offset(anchor, offset, axis_key)
@@ -461,6 +500,7 @@ local function anchor_offset(anchor, offset, axis_key)
 	}
 end
 
+---Constructs an axis solver where both edges are anchor_offset.
 ---@param anchor_min number
 ---@param anchor_max number
 ---@param offset_min number
@@ -468,17 +508,17 @@ end
 ---@param axis_key Axis
 ---@return AxisSolvers
 local function anchor_offset_axis(anchor_min, anchor_max, offset_min, offset_max, axis_key)
-	
 	return axis_min_max(
 		anchor_offset(anchor_min, offset_min, axis_key),
 		anchor_offset(anchor_max, offset_max, axis_key)
 	)
 end
 
----@param anchor_min userdata?
----@param anchor_max userdata?
----@param offset_min userdata?
----@param offset_max userdata?
+---Constructs a set of solvers where every edge is anchor_offset.
+---@param anchor_min userdata? Defaults to vec(0, 0)
+---@param anchor_max userdata? Defaults to vec(1, 1)
+---@param offset_min userdata? Defaults to vec(0, 0)
+---@param offset_max userdata? Defaults to vec(0, 0)
 ---@return Solvers
 local function anchor_offset_all(anchor_min, anchor_max, offset_min, offset_max)
 	anchor_min = anchor_min or vec(0, 0)
@@ -492,6 +532,8 @@ local function anchor_offset_all(anchor_min, anchor_max, offset_min, offset_max)
 	)
 end
 
+---Creates a minimum edge where the child is a fixed size, growing from its anchor
+---as a perunitage, which is collocated with the parent's anchor as a perunitage.
 ---@param parent_anchor number
 ---@param child_anchor number
 ---@param axis_key Axis
@@ -514,6 +556,8 @@ local function anchor_size_min(parent_anchor, child_anchor, axis_key)
 	}
 end
 
+---Creates a maximum edge where the child is a fixed size, growing from its anchor
+---as a perunitage, which is collocated with the parent's anchor as a perunitage.
 ---@param parent_anchor number
 ---@param child_anchor number
 ---@param axis_key Axis
@@ -536,6 +580,8 @@ local function anchor_size_max(parent_anchor, child_anchor, axis_key)
 	}
 end
 
+---Constructs an axis solver where the child is a fixed size, growing from its anchor
+---as a perunitage, which is collocated with the parent's anchor as a perunitage.
 ---@param parent_anchor number
 ---@param child_anchor number
 ---@param size number
@@ -548,6 +594,8 @@ local function anchor_size_axis(parent_anchor, child_anchor, size, axis_key)
 	)
 end
 
+---Constructs a set of solvers where the child is a fixed size, growing from its anchor
+---as a perunitage, which is collocated with the parent's anchor as a perunitage.
 ---@param parent_anchor userdata
 ---@param child_anchor userdata
 ---@param size userdata
@@ -559,6 +607,7 @@ local function anchor_size_all(parent_anchor, child_anchor, size)
 	)
 end
 
+---Offsets the edge from another edge on the rect or one of its relatives.
 ---@param relative Relation
 ---@param offset number
 ---@param key string
@@ -581,11 +630,12 @@ local function offset_from_edge(relative, offset, key)
 	end
 end
 
+---Creates a size which is some ratio of the cross axis's size.
 ---@param ratio number
----@param vertical boolean
+---@param is_vertical boolean Whether the solver operates on the vertical axis.
 ---@return AbsoluteSolver
-local function aspect_ratio(ratio, vertical)
-	if vertical then
+local function aspect_ratio(ratio, is_vertical)
+	if is_vertical then
 		return {
 			is_relative = NO,
 			fn = function(rect)
@@ -602,6 +652,13 @@ local function aspect_ratio(ratio, vertical)
 	end
 end
 
+---Places the edge a certain distance from an edge on the rect's previous sibling, or
+---a certain distance from an edge of the parent if no previous sibling exists.
+---@param sibling_offset number
+---@param parent_offset number
+---@param sibling_key string
+---@param parent_key string
+---@return AbsoluteSolver|RelativeSolver
 local function after_sibling(sibling_offset, parent_offset, sibling_key, parent_key)
 	---@type RelativeSolver
 	return switch_on_sibling(
@@ -611,18 +668,65 @@ local function after_sibling(sibling_offset, parent_offset, sibling_key, parent_
 	)
 end
 
----@param grow number
----@param low_key string
----@param high_key string
+---Faster alternative to fit_to_children which only works on children which are
+---strictly arrayed in a sequence.
+---@param grow number How much additional size to add.
+---@param direction Direction Which direction the array grows in.
 ---@return AbsoluteSolver
-local function fit_child_array(grow, low_key, high_key)
+local function fit_child_array(grow, direction)
+	local high_key = DIRECTION_TO_EDGE[direction]
+	local low_key = OPPOSITE_EDGE[high_key]
+	
+	---@type AbsoluteSolver
 	return {
 		is_relative = NO,
 		fn = function(rect)
 			local children = rect.children
-			if not children then return 0 end
+			if #children == 0 then return grow end
 			
 			return abs(children[1]:get_span(low_key, children[#children], high_key)) + grow
+		end
+	}
+end
+
+---Creates a size from the extremes of all children which do not depend on this size.
+---@param grow number How much additional size to add.
+---@param axis_key Axis
+---@return AbsoluteSolver
+local function fit_to_children(grow, axis_key)
+	local axis = AXIS_KEYS[axis_key]
+	local min_key, max_key = axis.min, axis.max
+	local size_key = AXIS_TO_SIZE[axis_key]
+	
+	---@type AbsoluteSolver
+	return {
+		is_relative = NO,
+		fn = function(rect)
+			local min_extremum = huge
+			local max_extremum = -huge
+			for _, child in ipairs(rect.children) do
+				local min_offset = rect:get_span(min_key, child, min_key)
+				if cycle_rect_register == rect and cycle_key_register == size_key then
+					cycle_rect_register = nil
+					cycle_key_register = nil
+				elseif not cycle_rect_register then
+					min_extremum = min(min_extremum, min_offset)
+				end
+				
+				local max_offset = rect:get_span(min_key, child, max_key)
+				if cycle_rect_register == rect and cycle_key_register == size_key then
+					cycle_rect_register = nil
+					cycle_key_register = nil
+				elseif not cycle_rect_register then
+					max_extremum = max(max_extremum, max_offset)
+				end
+			end
+			
+			if min_extremum == huge or max_extremum == -huge then
+				return grow
+			end
+			
+			return max_extremum - min_extremum + grow
 		end
 	}
 end
@@ -639,6 +743,9 @@ local function solvers_from_target(target)
 end
 
 return {
+	YES = YES,
+	NO = NO, -- What part of NO() don't you understand?
+	
 	new_rect = new_rect,
 	new_bounds = new_bounds,
 	new_solvers = new_solvers,
@@ -661,6 +768,7 @@ return {
 	after_sibling = after_sibling,
 	aspect_ratio = aspect_ratio,
 	fit_child_array = fit_child_array,
+	fit_to_children = fit_to_children,
 	
 	solvers_from_target = solvers_from_target,
 }

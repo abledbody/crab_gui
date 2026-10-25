@@ -10,34 +10,34 @@ local number
 
 local c_main_panel = layout.new_solvers(
 	layout.axis_size_min(
-		layout.fit_child_array(4, "min_x", "max_x"),
+		layout.fit_child_array(4, "right"),
 		layout.anchor_size_min(0.5, 0.5, "horizontal")
 	),
 	layout.axis_size_min(
-		layout.fit_child_array(4, "min_y", "max_y"),
+		layout.fit_to_children(4, "vertical"),
 		layout.anchor_size_min(0.5, 0.5, "vertical")
 	)
 )
 
 local c_button_panel = layout.new_solvers(
 	layout.axis_size_min(
-		layout.fit_child_array(0, "min_x", "max_x"),
-		layout.offset_from_edge("parent", 0, "min_x")
+		layout.fit_to_children(0, "horizontal"),
+		layout.offset_from_edge("parent", 2, "min_x")
 	),
 	layout.axis_size_min(
-		layout.fit_child_array(4, "min_y", "max_y"),
-		layout.offset_from_edge("parent", 0, "min_y")
+		layout.fit_child_array(0, "down"),
+		layout.offset_from_edge("parent", 2, "min_y")
 	)
 )
 
 local c_button = layout.new_solvers(
 	layout.axis_size_min(
 		layout.fixed(16),
-		layout.offset_from_edge("parent", 2, "min_x")
+		layout.offset_from_edge("parent", 0, "min_x")
 	),
 	layout.axis_size_min(
 		layout.aspect_ratio(1, true),
-		layout.after_sibling(2, 2, "max_y", "min_y")
+		layout.after_sibling(2, 0, "max_y", "min_y")
 	)
 )
 
@@ -58,8 +58,8 @@ local function do_gui()
 	gui:push_rect(c_main_panel)
 	sw.panel(gui, 1, 6)
 	
-	-- gui:push_rect(c_button_panel)
-	-- sw.panel(gui, 1, 6)
+	gui:push_rect(c_button_panel)
+	sw.panel(gui, 1, 6)
 	gui:push_rect(c_button)
 	sw.button(gui, "increment_button", font_cache, 16, "\^o0ff+", font_style, 2)
 	gui:pop_rect()
@@ -67,12 +67,12 @@ local function do_gui()
 	gui:push_rect(c_button)
 	sw.button(gui, "decrement_button", font_cache, 16, "\^o0ff-", font_style, 2)
 	gui:pop_rect()
-	-- gui:pop_rect()
+	gui:pop_rect()
 	
-	-- gui:push_rect(c_number_panel)
-	-- sw.panel(gui, 16, 4)
-	-- sw.text(gui, font_cache, ("\^o0ff%i"):format(number), font_style)
-	-- gui:pop_rect()
+	gui:push_rect(c_number_panel)
+	sw.panel(gui, 16, 4)
+	sw.text(gui, font_cache, ("\^o0ff%i"):format(number), font_style)
+	gui:pop_rect()
 	
 	gui:pop_rect()
 end
