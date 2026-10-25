@@ -3,6 +3,8 @@ local min, max = math.min, math.max
 local abs = math.abs
 local huge = math.huge
 
+local nan = ("f"):unpack("\1\0\128\127")
+
 ---@alias Axis "horizontal"|"vertical"
 ---@alias Direction "right"|"down"|"left"|"up"
 ---@alias Side "right"|"bottom"|"left"|"top"
@@ -78,6 +80,26 @@ local VALID_RELATIONS <const> = {
 local YES = function() return true end
 local NO = function() return false end
 
+local cycle_rect_register ---@type GuiRect?
+local cycle_key_register ---@type string?
+
+local function notify_cycle()
+	local rect = cycle_rect_register
+	if rect then
+		notify(("Key %s of rect generated on line %i of %s is self-dependent"):format(
+			cycle_key_register,
+			rect.source_info.currentline,
+			-- + 1 because inclusive index,
+			-- + 1 because pwd doesn't have a trailing slash.
+			rect.source_info.short_src:sub(#pwd() + 2)
+		))
+		cycle_rect_register = nil
+		cycle_key_register = nil
+		return true
+	end
+	return false
+end
+
 ---A rectangle defined by two 2D points.
 ---@class Bounds
 ---@field size userdata?
@@ -135,11 +157,15 @@ function m_gui_rect:find_root(key)
 	end
 	
 	-- Dependency cycle detection
+	
 	if self.pending_relative[key] then
-		error(("Dependency cycle detected in %s while trying to access property %s"):format(tostr(self), key))
+		cycle_rect_register = self
+		cycle_key_register = key
+		return nan, self, key
 	end
 	
 	-- Recursive root finding
+	
 	self.pending_relative[key] = true
 	local offset, source_rect, source_key = solver.fn(self)
 	
@@ -149,13 +175,17 @@ function m_gui_rect:find_root(key)
 	offset_from_root += offset
 	
 	-- Caching
-	if not cached_prop then
-		cached_prop = {}
-		self.cache[key] = cached_prop
+	
+	-- To prevent caching NaNs.
+	if offset_from_root == offset_from_root then
+		if not cached_prop then
+			cached_prop = {}
+			self.cache[key] = cached_prop
+		end
+		cached_prop.relative = offset_from_root
+		cached_prop.root_rect = root_rect
+		cached_prop.root_key = root_key
 	end
-	cached_prop.relative = offset_from_root
-	cached_prop.root_rect = root_rect
-	cached_prop.root_key = root_key
 	
 	return offset_from_root, root_rect, root_key
 end
@@ -176,7 +206,9 @@ function m_gui_rect:get_value(key)
 	
 	-- Dependency cycle detection
 	if self.pending_absolute[key] then
-		error(("Dependency cycle detected in %s while trying to access property %s"):format(tostr(self), key))
+		cycle_rect_register = self
+		cycle_key_register = key
+		return nan
 	end
 	
 	-- Absolute position solving
@@ -189,22 +221,23 @@ function m_gui_rect:get_value(key)
 	local value
 	if solver.is_relative(self) then
 		local offset, root_rect, root_key = self:find_root(key)
-		
-		-- We know cached_prop is nil at this point, and we know find_root has populated
-		-- it, so we should grab it.
-		cached_prop = self.cache[key]
 		value = root_rect:get_value(root_key) + offset
 	else
 		self.pending_absolute[key] = true
 		value = solver.fn(self)
 		self.pending_absolute[key] = nil
-		
-		-- And of course if we're not using find_root we need to make it manually.
-		cached_prop = {}
-		self.cache[key] = cached_prop
 	end
 	
-	cached_prop.absolute = value
+	-- Caching
+	
+	-- To prevent caching NaNs.
+	if value == value then
+		if not cached_prop then
+			cached_prop = {}
+			self.cache[key] = cached_prop
+		end
+		cached_prop.absolute = value
+	end
 	
 	return value
 end
@@ -230,6 +263,7 @@ end
 ---@return Bounds
 function m_gui_rect:get_bounds()
 	if self.bounds then return self.bounds end
+	notify_cycle()
 	local min = vec(self:get_value("min_x"), self:get_value("min_y"))
 	local max = vec(self:get_value("max_x"), self:get_value("max_y"))
 	
@@ -239,8 +273,9 @@ end
 
 ---@param solvers Solvers
 ---@param parent GuiRect? Defaults to self. Only use nil for the top level.
+---@param source_info debuginfo?
 ---@return GuiRect
-local function new_rect(solvers, parent)
+local function new_rect(solvers, parent, source_info)
 	---@class GuiRect
 	---@field next_sibling GuiRect?
 	---@field prev_sibling GuiRect?
@@ -250,6 +285,7 @@ local function new_rect(solvers, parent)
 		pending_relative = {}, ---@type table<string, true>
 		cache = {}, ---@type table<string, CachedProperty>
 		solvers = solvers,
+		source_info = source_info or debug.getinfo(2, "Sl")
 	}
 	
 	if parent then

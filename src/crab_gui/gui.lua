@@ -11,7 +11,7 @@ m_gui.__index = m_gui
 ---Pushes a child rect to the stack as a child of the current rect.
 ---@param constraints Solvers
 function m_gui:push_rect(constraints)
-	local rect = layout.new_rect(constraints, self.rect)
+	local rect = layout.new_rect(constraints, self.rect, debug.getinfo(2, "Sl"))
 	insert(self.rect_stack, rect)
 	self.rect = rect
 end
