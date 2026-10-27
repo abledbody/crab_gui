@@ -153,11 +153,7 @@ m_gui_rect.__index = m_gui_rect
 ---@return GuiRect root_rect
 ---@return string root_key
 function m_gui_rect:find_root(key)
-	local solver = self.solvers[key] ---@type Solver
-	
-	if not solver then
-		error(("'%s' is not a valid property key."):format(key))
-	end
+		local solver = self.solvers[key] or error(("'%s' is not a valid property key."):format(key))
 	
 	-- Absolute solver check before cache hit because if we're the root we return
 	-- early anyway. Using the relative cache is extra work.
@@ -232,11 +228,7 @@ function m_gui_rect:get_value(key)
 	end
 	
 	-- Absolute position solving
-	local solver = self.solvers[key]
-	
-	if not solver then
-		error(("'%s' is not a valid property key."):format(key))
-	end
+	local solver = self.solvers[key] or error(("'%s' is not a valid property key."):format(key))
 	
 	local value
 	if solver.is_relative(self) then
@@ -269,18 +261,19 @@ end
 
 ---Safely gets the relative distance between two rect edges, even if they haven't been
 ---fully solved yet.
+---@param from_rect GuiRect
 ---@param from_key string
 ---@param to_rect GuiRect
 ---@param to_key string
 ---@return number
-function m_gui_rect:get_span(from_key, to_rect, to_key)
-	local from_offset, from_root, from_root_key = self:find_root(from_key)
+function m_gui_rect.get_span(from_rect, from_key, to_rect, to_key)
+	local from_offset, from_root, from_root_key = from_rect:find_root(from_key)
 	local to_offset, to_root, to_root_key = to_rect:find_root(to_key)
 	
 	-- If they don't share a root, fall back to absolute evaluation. If the layout is
 	-- properly built, these dependencies are not themselves dependent on this span.
 	if from_root != to_root or from_root_key != to_root_key then
-		return to_rect:get_value(to_key) - self:get_value(from_key)
+		return to_rect:get_value(to_key) - from_rect:get_value(from_key)
 	end
 	
 	return to_offset - from_offset
@@ -588,9 +581,9 @@ end
 ---@param axis_key Axis
 ---@return AxisSolvers
 local function anchor_size_axis(parent_anchor, child_anchor, size, axis_key)
-	return axis_min_max(
-		anchor_offset(parent_anchor, -size * child_anchor, axis_key),
-		anchor_offset(parent_anchor, size * (1 - child_anchor), axis_key)
+	return axis_size_min(
+		fixed(size),
+		anchor_offset(parent_anchor, -size * child_anchor, axis_key)
 	)
 end
 
